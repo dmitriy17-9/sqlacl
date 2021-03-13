@@ -1,12 +1,15 @@
 import datetime
 
-from flask import Flask, render_template, redirect, request, make_response, session, abort
-from data import db_session
+from flask import Flask, render_template, redirect, request, make_response, session, abort, jsonify
+from data import db_session, jobs_api
 from data.users import User
 from data.news import News
+from forms.jobs import JobsForm
 from forms.news import NewsForm
 from forms.user import RegisterForm, LoginForm
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
+
+from jobs import Jobs
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
@@ -63,6 +66,15 @@ def add_news(db_sess):
     db_sess.commit()
 
 
+def add_jobs(db_sess):
+    jobs = Jobs()
+    jobs.team_leader = 2
+    jobs.job = "search for water"
+    jobs.work_size = "20"
+    jobs.collaborators = 5, 7
+    jobs.is_finished = False
+
+
 @app.route("/")
 def index():
     db_sess = db_session.create_session()
@@ -97,7 +109,7 @@ def reqister():
         db_sess.add(user)
         db_sess.commit()
         return redirect('/login')
-    return render_template('register.html', title='Регистрация', form=form)
+    return render_template('register_job.html', title='Регистрация', form=form)
 
 
 @app.route("/cookie_test")
@@ -143,6 +155,12 @@ def login():
                                message="Неправильный логин или пароль",
                                form=form)
     return render_template('login.html', title='Авторизация', form=form)
+
+
+@app.route('/addjob', methods=['GET', 'POST'])
+def addjob():
+    form = JobsForm()
+    return render_template('register_job.html', title='Регистрация', form=form)
 
 
 @app.route('/news', methods=['GET', 'POST'])
@@ -219,12 +237,18 @@ def logout():
     return redirect("/")
 
 
+@app.errorhandler(404)
+def not_found(error):
+    return make_response(jsonify({'error': 'Not found'}), 404)
+
+
 def main():
     db_session.global_init("db/blogs.db")
     # db_sess = db_session.create_session()
     # add_user(db_sess)
     # add_news(db_sess)
-
+    # add_jobs(db_sess)
+    app.register_blueprint(jobs_api.blueprint)
     app.run(port=8080, host='127.0.0.1')
 
 
